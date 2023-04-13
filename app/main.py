@@ -4,6 +4,10 @@ import psycopg2
 from fastapi import FastAPI, HTTPException, Response, status
 from psycopg2.extras import RealDictCursor
 from pydantic import BaseModel
+from . import models
+from .database import engine, get_db
+
+models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
