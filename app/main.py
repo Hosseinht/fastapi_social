@@ -4,27 +4,25 @@ from fastapi import Depends, FastAPI, HTTPException, Response, status
 from sqlalchemy.orm import Session
 
 from .database import Base, engine, get_db
-from .models import PostModel
-from .schemas import PostCreate, PostResponse
+from .models import PostModel, UserModel
+from .schemas import PostCreate, PostOut, UserCreate, UserOut
 
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
 
-@app.get("/posts", response_model=List[PostResponse])
+@app.get("/posts", response_model=List[PostOut])
 def get_posts(db: Session = Depends(get_db)):
     posts = db.query(PostModel).all()
     return posts
 
 
-@app.post("/posts", status_code=status.HTTP_201_CREATED, response_model=PostResponse)
+@app.post("/posts", status_code=status.HTTP_201_CREATED, response_model=PostOut)
 def create_posts(post: PostCreate, db: Session = Depends(get_db)):
     new_post = PostModel(
         title=post.title, content=post.content, published=post.published
     )
-    # or we can do it like this
-    # new_post = models.Post(**post.dict())
     db.add(new_post)
     db.commit()
     db.refresh(new_post)
@@ -69,3 +67,14 @@ def update(id: int, post: PostCreate, db: Session = Depends(get_db)):
     db.commit()
 
     return get_post.first()
+
+
+@app.post("/users", status_code=status.HTTP_201_CREATED, response_model=UserOut)
+def create_user(user: UserCreate, db: Session = Depends(get_db)):
+    new_user = UserModel(**user.dict())
+
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+
+    return new_user
