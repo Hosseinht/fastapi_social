@@ -1,56 +1,24 @@
-import time
-
-import psycopg2
 from fastapi import FastAPI, HTTPException, Response, status, Depends
-from psycopg2.extras import RealDictCursor
-from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from . import models
-from .database import engine, get_db
+from .models import PostModel
+from .schemas import PostCreate
+from .database import engine, get_db, Base
 
-models.Base.metadata.create_all(bind=engine)
+Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
 
-class Post(BaseModel):
-    # validate data with pydandic
-    title: str
-    content: str
-    published: bool = True
-
-
-# connect to database
-# while True:
-#     # continuously run until we successfully get a connection
-#     try:
-#         connection = psycopg2.connect(
-#             host="localhost",
-#             database="fastapi_social",
-#             user="postgres",
-#             password="D!G!kala",
-#             cursor_factory=RealDictCursor,
-#         )
-#         cursor = connection.cursor()
-#         print("Database connection was successfull")
-#         break
-#         # if we connect break the while loop
-#     except Exception as error:
-#         print("Connecting to database failed")
-#         print("Error: ", error)
-#         time.sleep(2)
-
-
 @app.get("/posts")
 def get_posts(db: Session = Depends(get_db)):
-    posts = db.query(models.Post).all()
+    posts = db.query(PostModel).all()
     return {"data": posts}
 
 
 @app.post("/posts", status_code=status.HTTP_201_CREATED)
-def create_posts(post: Post, db: Session = Depends(get_db)):
-    new_post = models.Post(
+def create_posts(post: PostCreate, db: Session = Depends(get_db)):
+    new_post = PostModel(
         title=post.title, content=post.content, published=post.published
     )
     # or we can do it like this
@@ -63,7 +31,7 @@ def create_posts(post: Post, db: Session = Depends(get_db)):
 
 @app.get("/posts/{id}")
 def get_post(id: int, db: Session = Depends(get_db)):
-    post = db.query(models.Post).get(id)
+    post = db.query(PostModel).get(id)
     # or
     # post = db.query(models.Post).filter(models.Post.id == id).first()
 
@@ -77,7 +45,7 @@ def get_post(id: int, db: Session = Depends(get_db)):
 
 @app.delete("/posts/{id}")
 def delete_post(id: int, db: Session = Depends(get_db)):
-    post = db.query(models.Post).get(id)
+    post = db.query(PostModel).get(id)
 
     if not post:
         raise HTTPException(
@@ -90,8 +58,8 @@ def delete_post(id: int, db: Session = Depends(get_db)):
 
 
 @app.put("/posts/{id}")
-def update(id: int, post: Post, db: Session = Depends(get_db)):
-    get_post = db.query(models.Post).filter(models.Post.id == id)
+def update(id: int, post: PostCreate, db: Session = Depends(get_db)):
+    get_post = db.query(PostModel).filter(PostModel.id == id)
 
     if not get_post.first():
         raise HTTPException(status_code=404, detail=f"Post with id {id} not found")
