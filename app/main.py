@@ -1,16 +1,18 @@
-from fastapi import FastAPI, HTTPException, Response, status, Depends
+from typing import List
+
+from fastapi import Depends, FastAPI, HTTPException, Response, status
 from sqlalchemy.orm import Session
 
+from .database import Base, engine, get_db
 from .models import PostModel
 from .schemas import PostCreate, PostResponse
-from .database import engine, get_db, Base
 
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
 
-@app.get("/posts")
+@app.get("/posts", response_model=List[PostResponse])
 def get_posts(db: Session = Depends(get_db)):
     posts = db.query(PostModel).all()
     return posts
