@@ -83,3 +83,13 @@ def create_user(user: UserCreate, db: Session = Depends(get_db)):
     db.refresh(new_user)
 
     return new_user
+
+
+@app.post("/users/{id}", status_code=status.HTTP_201_CREATED, response_model=UserOut)
+def get_user(id: int, db: Session = Depends(get_db)):
+    user = db.query(UserModel).filter(UserModel.id == id).first()
+
+    if not user:
+        raise HTTPException(status_code=404, detail=f"Post with id {id} not found")
+
+    return user
