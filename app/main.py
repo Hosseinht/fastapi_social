@@ -1,9 +1,11 @@
 import time
 
 import psycopg2
-from fastapi import FastAPI, HTTPException, Response, status
+from fastapi import FastAPI, HTTPException, Response, status, Depends
 from psycopg2.extras import RealDictCursor
 from pydantic import BaseModel
+from sqlalchemy.orm import Session
+
 from . import models
 from .database import engine, get_db
 
@@ -20,52 +22,50 @@ class Post(BaseModel):
 
 
 # connect to database
-while True:
-    # continuously run until we successfully get a connection
-    try:
-        connection = psycopg2.connect(
-            host="localhost",
-            database="fastapi_social",
-            user="postgres",
-            password="D!G!kala",
-            cursor_factory=RealDictCursor,
-        )
-        cursor = connection.cursor()
-        print("Database connection was successfull")
-        break
-        # if we connect break the while loop
-    except Exception as error:
-        print("Connecting to database failed")
-        print("Error: ", error)
-        time.sleep(2)
+# while True:
+#     # continuously run until we successfully get a connection
+#     try:
+#         connection = psycopg2.connect(
+#             host="localhost",
+#             database="fastapi_social",
+#             user="postgres",
+#             password="D!G!kala",
+#             cursor_factory=RealDictCursor,
+#         )
+#         cursor = connection.cursor()
+#         print("Database connection was successfull")
+#         break
+#         # if we connect break the while loop
+#     except Exception as error:
+#         print("Connecting to database failed")
+#         print("Error: ", error)
+#         time.sleep(2)
 
 
 @app.get("/posts")
-def get_posts():
-    cursor.execute("""SELECT * FROM posts""")
-    posts = cursor.fetchall()
+def get_posts(db: Session = Depends(get_db)):
+    posts = db.query(models.Post).all()
     return {"data": posts}
 
 
 @app.post("/posts", status_code=status.HTTP_201_CREATED)
-def create_posts(post: Post):
-    # because we passed Post to our path operation fastapi is automatically going to validate the data that it
-    # received from the client
-    cursor.execute(
-        """INSERT INTO posts (title,content,published) VALUES (%s,%s,%s) RETURNING * """,
-        (post.title, post.content, post.published),
+def create_posts(post: Post, db: Session = Depends(get_db)):
+    new_post = models.Post(
+        title=post.title, content=post.content, published=post.published
     )
-    new_post = cursor.fetchone()
-    # it will get *. whatever that is returned
-    connection.commit()
+    # or we can do it like this
+    # new_post = models.Post(**post.dict())
+    db.add(new_post)
+    db.commit()
+    db.refresh(new_post)
     return {"post": new_post}
 
 
 @app.get("/posts/{id}")
-def get_post(id: int):
-    cursor.execute("""SELECT * from posts WHERE id = %s""", str(id))
-    # we need id to be a string because our raw query is a string
-    post = cursor.fetchone()
+def get_post(id: int, db: Session = Depends(get_db)):
+    post = db.query(models.Post).get(id)
+    # or
+    # post = db.query(models.Post).filter(models.Post.id == id).first()
 
     if not post:
         raise HTTPException(
@@ -76,32 +76,27 @@ def get_post(id: int):
 
 
 @app.delete("/posts/{id}")
-def delete_post(id: int):
-    cursor.execute("""DELETE from posts WHERE id = %s RETURNING *""", str(id))
-    deleted_post = cursor.fetchone()
-    connection.commit()
+def delete_post(id: int, db: Session = Depends(get_db)):
+    post = db.query(models.Post).get(id)
 
-    if not deleted_post:
+    if not post:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"post with id {id} was not found",
         )
-
+    db.delete(post)
+    db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @app.put("/posts/{id}")
-def update(id: int, post: Post):
-    cursor.execute(
-        """UPDATE posts SET title=%s, content=%s, published=%s WHERE id=%s RETURNING *""",
-        (post.title, post.content, post.published, str(id)),
-    )
-    updated_post = cursor.fetchone()
+def update(id: int, post: Post, db: Session = Depends(get_db)):
+    get_post = db.query(models.Post).filter(models.Post.id == id)
 
-    if not updated_post:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"post with id {id} was not found",
-        )
+    if not get_post.first():
+        raise HTTPException(status_code=404, detail=f"Post with id {id} not found")
 
-    return {"data": updated_post}
+    get_post.update(post.dict(exclude_unset=True))
+
+    db.commit()
+    return {"data": get_post.first()}
