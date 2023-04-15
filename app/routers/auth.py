@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 
 from ..database import get_db
 from ..models import UserModel
+from ..oauth2 import create_access_token
 from ..schemas import UserLogin
 from ..utils import verify
 
@@ -22,4 +23,6 @@ def login(user_credentials: UserLogin, db: Session = Depends(get_db)):
             status_code=status.HTTP_404_NOT_FOUND, detail="Invalid Credentials"
         )
 
-    return {"token": "yakhchi"}
+    access_token = create_access_token(data={"user_id": user.id})
+
+    return {"access_toke": access_token, "token_type": "bearer"}
