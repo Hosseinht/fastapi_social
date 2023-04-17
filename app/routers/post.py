@@ -38,7 +38,7 @@ def create_posts(
     return new_post
 
 
-@router.get("/{id}")
+@router.get("/{id}", response_model=PostOutSchema)
 def get_post(
     id: int,
     db: Session = Depends(get_db),
@@ -60,32 +60,47 @@ def delete_post(
     db: Session = Depends(get_db),
     current_user: int = Depends(get_current_user),
 ):
-    post = db.query(PostModel).get(id)
+    post_query = db.query(PostModel).filter(PostModel.id == id)
+    post = post_query.first()
 
     if not post:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"post with id {id} was not found",
         )
-    db.delete(post)
+
+    if post.user_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorize to perform requested action",
+        )
+    post_query.delete()
+
     db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
-@router.put("/{id}")
+@router.put("/{id}", response_model=PostOutSchema)
 def update_post(
     id: int,
     post: PostCreateSchema,
     db: Session = Depends(get_db),
     current_user: int = Depends(get_current_user),
 ):
-    get_post = db.query(PostModel).filter(PostModel.id == id)
+    post_query = db.query(PostModel).filter(PostModel.id == id)
+    get_post = post_query.first()
 
-    if not get_post.first():
+    if not get_post:
         raise HTTPException(status_code=404, detail=f"Post with id {id} not found")
 
-    get_post.update(post.dict(exclude_unset=True))
+    if get_post.user_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorize to perform requested action",
+        )
+
+    post_query.update(post.dict(exclude_unset=True), synchronize_session=False)
 
     db.commit()
 
-    return get_post.first()
+    return get_post
