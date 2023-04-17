@@ -5,13 +5,13 @@ from sqlalchemy.orm import Session
 
 from ..database import get_db
 from ..models import PostModel
-from ..schemas import PostCreateSchema, PostOut
+from ..schemas import PostCreateSchema, PostOutSchema
 from ..oauth2 import get_current_user
 
 router = APIRouter(prefix="/posts", tags=["Posts"])
 
 
-@router.get("/", response_model=List[PostOut])
+@router.get("/", response_model=List[PostOutSchema])
 def get_posts(
     db: Session = Depends(get_db),
     current_user: int = Depends(get_current_user),
@@ -20,14 +20,17 @@ def get_posts(
     return posts
 
 
-@router.post("/", status_code=status.HTTP_201_CREATED, response_model=PostOut)
+@router.post("/", status_code=status.HTTP_201_CREATED, response_model=PostOutSchema)
 def create_posts(
     post: PostCreateSchema,
     db: Session = Depends(get_db),
     current_user: int = Depends(get_current_user),
 ):
     new_post = PostModel(
-        title=post.title, content=post.content, published=post.published
+        title=post.title,
+        content=post.content,
+        published=post.published,
+        user_id=current_user.id,
     )
     db.add(new_post)
     db.commit()

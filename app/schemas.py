@@ -18,11 +18,12 @@ class PostCreateSchema(PostBase):
     pass
 
 
-class PostOut(BaseModel):
+class PostOutSchema(BaseModel):
     id: int
     title: str
     content: str
     published: bool = True
+    user_id: int
     created_at: datetime
 
     class Config:
