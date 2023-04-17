@@ -5,19 +5,27 @@ from sqlalchemy.orm import Session
 
 from ..database import get_db
 from ..models import PostModel
-from ..schemas import PostCreate, PostOut
+from ..schemas import PostCreateSchema, PostOut
+from ..oauth2 import get_current_user
 
 router = APIRouter(prefix="/posts", tags=["Posts"])
 
 
 @router.get("/", response_model=List[PostOut])
-def get_posts(db: Session = Depends(get_db)):
+def get_posts(
+    db: Session = Depends(get_db),
+    current_user: int = Depends(get_current_user),
+):
     posts = db.query(PostModel).all()
     return posts
 
 
 @router.post("/", status_code=status.HTTP_201_CREATED, response_model=PostOut)
-def create_posts(post: PostCreate, db: Session = Depends(get_db)):
+def create_posts(
+    post: PostCreateSchema,
+    db: Session = Depends(get_db),
+    current_user: int = Depends(get_current_user),
+):
     new_post = PostModel(
         title=post.title, content=post.content, published=post.published
     )
@@ -28,7 +36,11 @@ def create_posts(post: PostCreate, db: Session = Depends(get_db)):
 
 
 @router.get("/{id}")
-def get_post(id: int, db: Session = Depends(get_db)):
+def get_post(
+    id: int,
+    db: Session = Depends(get_db),
+    current_user: int = Depends(get_current_user),
+):
     post = db.query(PostModel).get(id)
 
     if not post:
@@ -40,7 +52,11 @@ def get_post(id: int, db: Session = Depends(get_db)):
 
 
 @router.delete("/{id}")
-def delete_post(id: int, db: Session = Depends(get_db)):
+def delete_post(
+    id: int,
+    db: Session = Depends(get_db),
+    current_user: int = Depends(get_current_user),
+):
     post = db.query(PostModel).get(id)
 
     if not post:
@@ -54,7 +70,12 @@ def delete_post(id: int, db: Session = Depends(get_db)):
 
 
 @router.put("/{id}")
-def update_post(id: int, post: PostCreate, db: Session = Depends(get_db)):
+def update_post(
+    id: int,
+    post: PostCreateSchema,
+    db: Session = Depends(get_db),
+    current_user: int = Depends(get_current_user),
+):
     get_post = db.query(PostModel).filter(PostModel.id == id)
 
     if not get_post.first():

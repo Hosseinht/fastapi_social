@@ -20,12 +20,13 @@ def login(
     )
     if not user:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Invalid Credentials"
+            status_code=status.HTTP_403_FORBIDDEN, detail="Invalid Credentials"
         )
 
     if not verify(user_credentials.password, user.password):
+        # verify the password
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Invalid Credentials"
+            status_code=status.HTTP_403_FORBIDDEN, detail="Invalid Credentials"
         )
 
     access_token = create_access_token(data={"user_id": user.id})
