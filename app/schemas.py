@@ -18,18 +18,6 @@ class PostCreateSchema(PostBase):
     pass
 
 
-class PostOutSchema(BaseModel):
-    id: int
-    title: str
-    content: str
-    published: bool = True
-    user_id: int
-    created_at: datetime
-
-    class Config:
-        orm_mode = True
-
-
 class UserCreateSchema(BaseModel):
     email: EmailStr
     password: str
@@ -38,6 +26,19 @@ class UserCreateSchema(BaseModel):
 class UserOutSchema(BaseModel):
     id: int
     email: EmailStr
+    created_at: datetime
+
+    class Config:
+        orm_mode = True
+
+
+class PostOutSchema(BaseModel):
+    id: int
+    title: str
+    content: str
+    published: bool = True
+    user_id: int
+    user: "UserOutSchema"
     created_at: datetime
 
     class Config:
