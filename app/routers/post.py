@@ -1,6 +1,7 @@
-from typing import List
+from typing import List, Optional
 
 from fastapi import Depends, HTTPException, Response, status, APIRouter
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from ..database import get_db
@@ -15,8 +16,17 @@ router = APIRouter(prefix="/posts", tags=["Posts"])
 def get_posts(
     db: Session = Depends(get_db),
     current_user: int = Depends(get_current_user),
+    limit: int = 10,
+    skip: int = 0,
+    search: Optional[str] = "",
 ):
-    posts = db.query(PostModel).all()
+    posts = (
+        db.query(PostModel)
+        .filter(func.lower(PostModel.title).contains(f"%{search.lower()}%"))
+        .limit(limit)
+        .offset(skip)
+        .all()
+    )
     return posts
 
 
