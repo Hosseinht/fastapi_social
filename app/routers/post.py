@@ -5,14 +5,14 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from ..database import get_db
-from ..models import PostModel
-from ..schemas import PostCreateSchema, PostOutSchema
+from ..models import PostModel, VoteModel
+from ..schemas import PostCreateSchema, PostOutSchema, PostVoteSchema
 from ..oauth2 import get_current_user
 
 router = APIRouter(prefix="/posts", tags=["Posts"])
 
 
-@router.get("/", response_model=List[PostOutSchema])
+@router.get("/", response_model=List[PostVoteSchema])
 def get_posts(
     db: Session = Depends(get_db),
     current_user: int = Depends(get_current_user),
@@ -20,8 +20,11 @@ def get_posts(
     skip: int = 0,
     search: Optional[str] = "",
 ):
+
     posts = (
-        db.query(PostModel)
+        db.query(PostModel, func.count(VoteModel.post_id).label("votes"))
+        .join(VoteModel, VoteModel.post_id == PostModel.id, isouter=True)
+        .group_by(PostModel.id)
         .filter(func.lower(PostModel.title).contains(f"%{search.lower()}%"))
         .limit(limit)
         .offset(skip)

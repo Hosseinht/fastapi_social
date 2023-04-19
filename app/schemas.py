@@ -2,6 +2,7 @@ from datetime import datetime
 from typing import Optional
 
 from pydantic import BaseModel, EmailStr
+from pydantic.types import conint
 
 
 # Schema is a data structure that defines the expected format of the data. it is used to validate data before it is
@@ -45,6 +46,14 @@ class PostOutSchema(BaseModel):
         orm_mode = True
 
 
+class PostVoteSchema(BaseModel):
+    PostModel: PostOutSchema
+    votes: int
+
+    class Config:
+        orm_mode = True
+
+
 class UserLoginSchema(BaseModel):
     email: EmailStr
     password: str
@@ -57,3 +66,8 @@ class TokenSchema(BaseModel):
 
 class TokenDataSchema(BaseModel):
     id: Optional[str] = None
+
+
+class VoteSchema(BaseModel):
+    post_id: int
+    dir: conint(ge=0, le=1)

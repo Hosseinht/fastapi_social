@@ -34,7 +34,7 @@ class UserModel(Base):
     )
 
 
-class Vote(Base):
+class VoteModel(Base):
     __tablename__ = "votes"
 
     user_id = Column(
